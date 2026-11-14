@@ -15,6 +15,10 @@ pub(crate) struct Cfg {
     pub(crate) leading_zero_numbers_as_strings: bool,
     /// Preserve scalars containing underscores during implicit inference.
     pub(crate) underscored_numbers_as_strings: bool,
+    /// Accept only lowercase `0x`/`0o`/`0b` radix prefixes.
+    pub(crate) lowercase_radix_prefixes_only: bool,
+    /// Read plain null-like scalars as string text and omitted values as empty collections.
+    pub(crate) null_scalars_as_text: bool,
     /// If true, accept only the six YAML 1.2 Core boolean spellings.
     pub(crate) strict_booleans: bool,
     /// Preserve plain null-like text when a string target is requested.
@@ -47,6 +51,8 @@ impl Cfg {
             legacy_octal_numbers: options.legacy_octal_numbers,
             leading_zero_numbers_as_strings: options.leading_zero_numbers_as_strings,
             underscored_numbers_as_strings: options.underscored_numbers_as_strings,
+            lowercase_radix_prefixes_only: options.lowercase_radix_prefixes_only,
+            null_scalars_as_text: options.null_scalars_as_text,
             strict_booleans: options.strict_booleans,
             null_as_string: options.null_as_string,
             angle_conversions: options.angle_conversions,

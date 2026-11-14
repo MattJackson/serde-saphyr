@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Added opt-in `serde_yaml` compatibility options, all defaulting to `false`:
+  - `Options::null_scalars_as_text` reads plain null-like scalars (empty, `~`, `null`, ...)
+    into `String` as their text, and an omitted value or an empty document as an empty
+    sequence, map, or struct.
+  - `Options::lowercase_radix_prefixes_only` treats `0X`, `0O`, and `0B` as non-integers:
+    strings when inferred, invalid for integer targets.
+
 ## 2.2.0
 
 ### Added
@@ -34,6 +44,7 @@
 - Updated to granit-parser 2.2.0. Under-indented quoted scalar continuations in block
   context and tabs before quoted continuations are now accepted by default;
   `strict_indentation: true` continues to reject them.
+
 ## 2.1.1
 
 ### Fixed

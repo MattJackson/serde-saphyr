@@ -374,6 +374,34 @@ pub struct Options {
     /// retain their existing behavior. Default: false.
     #[cfg_attr(feature = "serde_derived_types", serde(default))]
     pub underscored_numbers_as_strings: bool,
+    /// Recognize only the lowercase radix prefixes `0x`, `0o`, and `0b`.
+    ///
+    /// By default, the uppercase prefixes `0X`, `0O`, and `0B` are accepted as well.
+    /// When `true`, plain scalars such as `0XFF` or `-0B1` are not integers: implicit
+    /// type inference (`deserialize_any`, untagged enums, and flattened fields) keeps
+    /// them as strings, and integer targets reject them as invalid integers. This
+    /// supports compatibility with `serde_yaml`. Mapping-key equality retains its
+    /// existing behavior. Default: false.
+    #[cfg_attr(feature = "serde_derived_types", serde(default))]
+    pub lowercase_radix_prefixes_only: bool,
+    /// Read plain null-like scalars as text for string targets, and an omitted value
+    /// as an empty sequence or mapping, as `serde_yaml` does.
+    ///
+    /// By default, an untagged plain null-like scalar (empty, `~`, `null`, `Null`, or
+    /// `NULL`) cannot be deserialized into a string, and no null is an empty
+    /// collection. When `true`:
+    ///
+    /// - such a scalar deserializes into a string as its source text (`""`,
+    ///   `"~"`, `"null"`, ...). An explicit `!!null` tag is still rejected;
+    /// - an empty plain scalar (as in `key:` or a document that is only `---`)
+    ///   deserializes into a sequence, tuple, map, or struct as an empty one, so a
+    ///   struct gets each field's missing-field behavior. `~` and `null` are still
+    ///   rejected for these targets, as in `serde_yaml`.
+    ///
+    /// `Option` targets still read null as `None`, and untyped values still read it as
+    /// null. Default: false.
+    #[cfg_attr(feature = "serde_derived_types", serde(default))]
+    pub null_scalars_as_text: bool,
     /// If true, accept only YAML 1.2 Core boolean spellings:
     /// `true`, `True`, `TRUE`, `false`, `False`, and `FALSE`.
     /// Other spellings, including YAML 1.1 forms such as `yes`/`no`/`on`/`off`,
@@ -778,6 +806,8 @@ impl Default for Options {
             legacy_octal_numbers: false,
             leading_zero_numbers_as_strings: false,
             underscored_numbers_as_strings: false,
+            lowercase_radix_prefixes_only: false,
+            null_scalars_as_text: false,
             strict_booleans: false,
             null_as_string: false,
             angle_conversions: false,
@@ -836,6 +866,11 @@ impl std::fmt::Debug for Options {
                 "underscored_numbers_as_strings",
                 &self.underscored_numbers_as_strings,
             )
+            .field(
+                "lowercase_radix_prefixes_only",
+                &self.lowercase_radix_prefixes_only,
+            )
+            .field("null_scalars_as_text", &self.null_scalars_as_text)
             .field("strict_booleans", &self.strict_booleans)
             .field("null_as_string", &self.null_as_string)
             .field(
@@ -923,6 +958,8 @@ mod tests {
         assert!(!opts.legacy_octal_numbers);
         assert!(!opts.leading_zero_numbers_as_strings);
         assert!(!opts.underscored_numbers_as_strings);
+        assert!(!opts.lowercase_radix_prefixes_only);
+        assert!(!opts.null_scalars_as_text);
         assert!(!opts.strict_booleans);
         assert!(!opts.null_as_string);
         assert!(!opts.ignore_binary_tag_for_string);
