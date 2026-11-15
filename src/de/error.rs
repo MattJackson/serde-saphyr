@@ -792,6 +792,33 @@ thread_local! {
     static MISSING_FIELD_FALLBACK: Cell<Option<Location>> = const { Cell::new(None) };
 }
 
+// The start of the mapping being deserialized, for a missing field under
+// `Options::missing_field_at_mapping_start` (None when that option is off). Set by
+// [`MappingStartGuard`] when a mapping is entered, restored when it is left.
+thread_local! {
+    static MAPPING_START: Cell<Option<Location>> = const { Cell::new(None) };
+}
+
+/// RAII guard for [`MAPPING_START`]: saves the previous value on creation, restores it on drop.
+pub(crate) struct MappingStartGuard {
+    prev: Option<Location>,
+}
+
+impl MappingStartGuard {
+    /// `start` is recorded only when `enabled` (the option is on); otherwise it records none.
+    pub(crate) fn new(start: Location, enabled: bool) -> Self {
+        let value = enabled.then_some(start);
+        let prev = MAPPING_START.with(|c| c.replace(value));
+        Self { prev }
+    }
+}
+
+impl Drop for MappingStartGuard {
+    fn drop(&mut self) {
+        MAPPING_START.with(|c| c.set(self.prev));
+    }
+}
+
 /// RAII guard for [`MISSING_FIELD_FALLBACK`]. Saves the previous value on creation,
 /// restores it on drop.
 pub(crate) struct MissingFieldLocationGuard {
@@ -2740,10 +2767,15 @@ impl de::Error for Error {
     #[cold]
     #[inline(never)]
     fn missing_field(field: &'static str) -> Self {
-        maybe_attach_fallback_location(Error::SerdeMissingField {
+        let error = Error::SerdeMissingField {
             field,
             location: Location::UNKNOWN,
-        })
+        };
+        match MAPPING_START.with(std::cell::Cell::get) {
+            // serde_yaml's placement: the start of the mapping the field is missing from.
+            Some(start) if start != Location::UNKNOWN => error.with_location(start),
+            _ => maybe_attach_fallback_location(error),
+        }
     }
 }
 
