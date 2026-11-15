@@ -2,7 +2,6 @@
 //! `serde_yaml` reads it.
 #![cfg(feature = "deserialize")]
 
-
 use serde::Deserialize;
 use serde_saphyr::{Options, from_str_with_options};
 
