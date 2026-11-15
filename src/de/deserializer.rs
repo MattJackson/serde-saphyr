@@ -1046,7 +1046,13 @@ impl<'de> de::Deserializer<'de> for YamlDeserializer<'de, '_> {
             let t = yaml_trim(&effective);
             // Preserve selected spellings before either numeric parser can consume
             // them. Explicit numeric tags have already dispatched above.
-            if (self.cfg.leading_zero_numbers_as_strings && leading_zero_decimal(t))
+            // YAML 1.2 Core allows a sign on `.inf` only, so `+.nan` and `-.nan` are strings
+            // (backport of upstream #272).
+            let unsigned = t.strip_prefix(['+', '-']).unwrap_or(t);
+            let signed_nan =
+                unsigned.len() < t.len() && matches!(unsigned, ".nan" | ".NaN" | ".NAN");
+            if signed_nan
+                || (self.cfg.leading_zero_numbers_as_strings && leading_zero_decimal(t))
                 || (self.cfg.underscored_numbers_as_strings && t.contains('_'))
                 || (self.cfg.lowercase_radix_prefixes_only && uppercase_radix_prefix(t))
             {
