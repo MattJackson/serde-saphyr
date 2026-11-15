@@ -307,6 +307,11 @@ pub(crate) struct LiveEvents<'a> {
     /// Retain scalar tag spellings for struct field-name diagnostics.
     preserve_original_tags: bool,
 
+    /// With `null_scalars_as_text`, report an empty node (which granit-parser emits as the
+    /// plain scalar `~` over a zero-length span) as the empty plain scalar, so that typed
+    /// reads can tell an omitted value from a written `~`.
+    empty_nodes_as_empty_text: bool,
+
     /// Whether robotics-only angle tags are supported in strict mode.
     angle_conversions: bool,
 
@@ -374,6 +379,7 @@ impl<'a> LiveEvents<'a> {
         let pending_error = options.validate().err();
         let reject_unsupported_tags = options.reject_unsupported_tags;
         let preserve_original_tags = options.reject_tagged_field_names;
+        let empty_nodes_as_empty_text = options.null_scalars_as_text;
         let angle_conversions = options.angle_conversions;
         let require_indent = options.require_indent;
         #[cfg(feature = "properties")]
@@ -443,6 +449,7 @@ impl<'a> LiveEvents<'a> {
             pending_error,
             reject_unsupported_tags,
             preserve_original_tags,
+            empty_nodes_as_empty_text,
             angle_conversions,
             tag_context: SmallVec::new(),
 
@@ -473,6 +480,7 @@ impl<'a> LiveEvents<'a> {
         let pending_error = options.validate().err();
         let reject_unsupported_tags = options.reject_unsupported_tags;
         let preserve_original_tags = options.reject_tagged_field_names;
+        let empty_nodes_as_empty_text = options.null_scalars_as_text;
         let angle_conversions = options.angle_conversions;
         let require_indent = options.require_indent;
         #[cfg(feature = "properties")]
@@ -540,6 +548,7 @@ impl<'a> LiveEvents<'a> {
             pending_error,
             reject_unsupported_tags,
             preserve_original_tags,
+            empty_nodes_as_empty_text,
             angle_conversions,
             tag_context: SmallVec::new(),
 
@@ -1008,6 +1017,19 @@ impl<'a> LiveEvents<'a> {
                 Event::Scalar(val, style, anchor_id, tag) => {
                     #[cfg(feature = "include")]
                     let mut anchor_id = anchor_id;
+
+                    // granit-parser emits an empty node as the plain scalar `~`; only its
+                    // zero-length span tells it from a written `~`.
+                    let val = if self.empty_nodes_as_empty_text
+                        && tag.is_none()
+                        && style == ScalarStyle::Plain
+                        && span.is_empty()
+                        && val == "~"
+                    {
+                        Cow::Borrowed("")
+                    } else {
+                        val
+                    };
 
                     let tag_s = SfTag::from_optional_cow(&tag);
 
