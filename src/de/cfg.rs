@@ -25,6 +25,8 @@ pub(crate) struct Cfg {
     pub(crate) unit_structs_refuse_mappings: bool,
     /// Refuse a `!!null` scalar with non-null text for a unit target.
     pub(crate) null_tag_requires_null_text: bool,
+    /// Place a missing field at its mapping's start.
+    pub(crate) missing_field_at_mapping_start: bool,
     /// If true, accept only the six YAML 1.2 Core boolean spellings.
     pub(crate) strict_booleans: bool,
     /// If true, ROS-compliant angle resolver is enabled
@@ -60,6 +62,7 @@ impl Cfg {
             quoted_scalars_are_strings: options.quoted_scalars_are_strings,
             unit_structs_refuse_mappings: options.unit_structs_refuse_mappings,
             null_tag_requires_null_text: options.null_tag_requires_null_text,
+            missing_field_at_mapping_start: options.missing_field_at_mapping_start,
             strict_booleans: options.strict_booleans,
             angle_conversions: options.angle_conversions,
             ignore_binary_tag_for_string: options.ignore_binary_tag_for_string,

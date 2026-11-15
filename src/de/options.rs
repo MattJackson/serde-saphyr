@@ -427,6 +427,13 @@ pub struct Options {
     /// (`Null`, `NULL`). Default: false.
     #[cfg_attr(feature = "serde_derived_types", serde(default))]
     pub null_tag_requires_null_text: bool,
+    /// Place a struct's missing-field error at the start of its mapping, as `serde_yaml` does.
+    ///
+    /// By default the error falls back to the location of the last key read. When `true`, it is
+    /// placed at the mapping's start (its first key for a block mapping, its `{` for a flow
+    /// mapping). Default: false.
+    #[cfg_attr(feature = "serde_derived_types", serde(default))]
+    pub missing_field_at_mapping_start: bool,
     /// If true, accept only YAML 1.2 Core boolean spellings:
     /// `true`, `True`, `TRUE`, `false`, `False`, and `FALSE`.
     /// Other spellings, including YAML 1.1 forms such as `yes`/`no`/`on`/`off`,
@@ -823,6 +830,7 @@ impl Default for Options {
             quoted_scalars_are_strings: false,
             unit_structs_refuse_mappings: false,
             null_tag_requires_null_text: false,
+            missing_field_at_mapping_start: false,
             strict_booleans: false,
             angle_conversions: false,
             ignore_binary_tag_for_string: false,
@@ -900,6 +908,10 @@ impl std::fmt::Debug for Options {
             .field(
                 "null_tag_requires_null_text",
                 &self.null_tag_requires_null_text,
+            )
+            .field(
+                "missing_field_at_mapping_start",
+                &self.missing_field_at_mapping_start,
             )
             .field("strict_booleans", &self.strict_booleans)
             .field(
@@ -993,6 +1005,7 @@ mod tests {
         assert!(!opts.quoted_scalars_are_strings);
         assert!(!opts.unit_structs_refuse_mappings);
         assert!(!opts.null_tag_requires_null_text);
+        assert!(!opts.missing_field_at_mapping_start);
         assert!(!opts.strict_booleans);
         assert!(!opts.ignore_binary_tag_for_string);
         assert!(!opts.angle_conversions);
