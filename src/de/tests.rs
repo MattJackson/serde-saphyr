@@ -185,6 +185,7 @@ fn cfg_and_replay_events_follow_options_and_reference_overrides() {
         underscored_numbers_as_strings: true,
         lowercase_radix_prefixes_only: true,
         null_scalars_as_text: true,
+        quoted_scalars_are_strings: true,
         strict_booleans: true,
         null_as_string: true,
         angle_conversions: true,
@@ -202,6 +203,7 @@ fn cfg_and_replay_events_follow_options_and_reference_overrides() {
     assert!(cfg.underscored_numbers_as_strings);
     assert!(cfg.lowercase_radix_prefixes_only);
     assert!(cfg.null_scalars_as_text);
+    assert!(cfg.quoted_scalars_are_strings);
     assert!(cfg.strict_booleans);
     assert!(cfg.null_as_string);
     assert!(cfg.angle_conversions);

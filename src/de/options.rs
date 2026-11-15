@@ -405,6 +405,15 @@ pub struct Options {
     /// null. Default: false.
     #[cfg_attr(feature = "serde_derived_types", serde(default))]
     pub null_scalars_as_text: bool,
+    /// Read a quoted scalar without a tag as a string only, as `serde_yaml` does.
+    ///
+    /// By default a single- or double-quoted scalar such as `'1024'` or `"true"` also
+    /// deserializes into an integer, float, or boolean target when its text parses as one.
+    /// When `true`, such a scalar is refused for those targets (`invalid u64`, ...); an
+    /// explicit core tag (`!!int "1024"`) still reads, and string and untyped targets are
+    /// unaffected. Default: false.
+    #[cfg_attr(feature = "serde_derived_types", serde(default))]
+    pub quoted_scalars_are_strings: bool,
     /// If true, accept only YAML 1.2 Core boolean spellings:
     /// `true`, `True`, `TRUE`, `false`, `False`, and `FALSE`.
     /// Other spellings, including YAML 1.1 forms such as `yes`/`no`/`on`/`off`,
@@ -811,6 +820,7 @@ impl Default for Options {
             underscored_numbers_as_strings: false,
             lowercase_radix_prefixes_only: false,
             null_scalars_as_text: false,
+            quoted_scalars_are_strings: false,
             strict_booleans: false,
             null_as_string: false,
             angle_conversions: false,
@@ -874,6 +884,10 @@ impl std::fmt::Debug for Options {
                 &self.lowercase_radix_prefixes_only,
             )
             .field("null_scalars_as_text", &self.null_scalars_as_text)
+            .field(
+                "quoted_scalars_are_strings",
+                &self.quoted_scalars_are_strings,
+            )
             .field("strict_booleans", &self.strict_booleans)
             .field("null_as_string", &self.null_as_string)
             .field(
@@ -963,6 +977,7 @@ mod tests {
         assert!(!opts.underscored_numbers_as_strings);
         assert!(!opts.lowercase_radix_prefixes_only);
         assert!(!opts.null_scalars_as_text);
+        assert!(!opts.quoted_scalars_are_strings);
         assert!(!opts.strict_booleans);
         assert!(!opts.null_as_string);
         assert!(!opts.ignore_binary_tag_for_string);
