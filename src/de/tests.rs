@@ -187,6 +187,7 @@ fn cfg_and_replay_events_follow_options_and_reference_overrides() {
         null_scalars_as_text: true,
         quoted_scalars_are_strings: true,
         unit_structs_refuse_mappings: true,
+        null_tag_requires_null_text: true,
         strict_booleans: true,
         null_as_string: true,
         angle_conversions: true,
@@ -206,6 +207,7 @@ fn cfg_and_replay_events_follow_options_and_reference_overrides() {
     assert!(cfg.null_scalars_as_text);
     assert!(cfg.quoted_scalars_are_strings);
     assert!(cfg.unit_structs_refuse_mappings);
+    assert!(cfg.null_tag_requires_null_text);
     assert!(cfg.strict_booleans);
     assert!(cfg.null_as_string);
     assert!(cfg.angle_conversions);

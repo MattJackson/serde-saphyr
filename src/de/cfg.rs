@@ -23,6 +23,8 @@ pub(crate) struct Cfg {
     pub(crate) quoted_scalars_are_strings: bool,
     /// Refuse an empty mapping for a unit struct target.
     pub(crate) unit_structs_refuse_mappings: bool,
+    /// Refuse a `!!null` scalar with non-null text for a unit target.
+    pub(crate) null_tag_requires_null_text: bool,
     /// If true, accept only the six YAML 1.2 Core boolean spellings.
     pub(crate) strict_booleans: bool,
     /// Preserve plain null-like text when a string target is requested.
@@ -59,6 +61,7 @@ impl Cfg {
             null_scalars_as_text: options.null_scalars_as_text,
             quoted_scalars_are_strings: options.quoted_scalars_are_strings,
             unit_structs_refuse_mappings: options.unit_structs_refuse_mappings,
+            null_tag_requires_null_text: options.null_tag_requires_null_text,
             strict_booleans: options.strict_booleans,
             null_as_string: options.null_as_string,
             angle_conversions: options.angle_conversions,
