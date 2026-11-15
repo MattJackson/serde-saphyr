@@ -414,6 +414,13 @@ pub struct Options {
     /// unaffected. Default: false.
     #[cfg_attr(feature = "serde_derived_types", serde(default))]
     pub quoted_scalars_are_strings: bool,
+    /// Read a unit struct only from a null-like value, as `serde_yaml` does.
+    ///
+    /// By default an empty mapping (`{}`) also deserializes into a unit struct. When `true`,
+    /// a mapping is refused for a unit struct target (like any other non-null value); null,
+    /// `~` and an absent value still read. Default: false.
+    #[cfg_attr(feature = "serde_derived_types", serde(default))]
+    pub unit_structs_refuse_mappings: bool,
     /// If true, accept only YAML 1.2 Core boolean spellings:
     /// `true`, `True`, `TRUE`, `false`, `False`, and `FALSE`.
     /// Other spellings, including YAML 1.1 forms such as `yes`/`no`/`on`/`off`,
@@ -821,6 +828,7 @@ impl Default for Options {
             lowercase_radix_prefixes_only: false,
             null_scalars_as_text: false,
             quoted_scalars_are_strings: false,
+            unit_structs_refuse_mappings: false,
             strict_booleans: false,
             null_as_string: false,
             angle_conversions: false,
@@ -887,6 +895,10 @@ impl std::fmt::Debug for Options {
             .field(
                 "quoted_scalars_are_strings",
                 &self.quoted_scalars_are_strings,
+            )
+            .field(
+                "unit_structs_refuse_mappings",
+                &self.unit_structs_refuse_mappings,
             )
             .field("strict_booleans", &self.strict_booleans)
             .field("null_as_string", &self.null_as_string)
@@ -978,6 +990,7 @@ mod tests {
         assert!(!opts.lowercase_radix_prefixes_only);
         assert!(!opts.null_scalars_as_text);
         assert!(!opts.quoted_scalars_are_strings);
+        assert!(!opts.unit_structs_refuse_mappings);
         assert!(!opts.strict_booleans);
         assert!(!opts.null_as_string);
         assert!(!opts.ignore_binary_tag_for_string);

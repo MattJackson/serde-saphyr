@@ -1614,7 +1614,13 @@ impl<'de> de::Deserializer<'de> for YamlDeserializer<'de, '_> {
         visitor: V,
     ) -> Result<V::Value, Self::Error> {
         match self.ev.peek()? {
-            // Allow empty mapping `{}` as a unit struct
+            // Allow empty mapping `{}` as a unit struct, unless the caller reads unit structs
+            // from null-like values only (`unit_structs_refuse_mappings`).
+            Some(Ev::MapStart { location, .. }) if self.cfg.unit_structs_refuse_mappings => {
+                Err(Error::UnexpectedValueForUnit {
+                    location: *location,
+                })
+            }
             Some(Ev::MapStart { .. }) => {
                 let _ = self.ev.next()?; // consume MapStart
                 match self.ev.peek()? {
