@@ -19,6 +19,8 @@ pub(crate) struct Cfg {
     pub(crate) lowercase_radix_prefixes_only: bool,
     /// Read plain null-like scalars as string text and omitted values as empty collections.
     pub(crate) null_scalars_as_text: bool,
+    /// Refuse untagged quoted scalars for boolean and numeric targets.
+    pub(crate) quoted_scalars_are_strings: bool,
     /// If true, accept only the six YAML 1.2 Core boolean spellings.
     pub(crate) strict_booleans: bool,
     /// If true, ROS-compliant angle resolver is enabled
@@ -51,6 +53,7 @@ impl Cfg {
             underscored_numbers_as_strings: options.underscored_numbers_as_strings,
             lowercase_radix_prefixes_only: options.lowercase_radix_prefixes_only,
             null_scalars_as_text: options.null_scalars_as_text,
+            quoted_scalars_are_strings: options.quoted_scalars_are_strings,
             strict_booleans: options.strict_booleans,
             angle_conversions: options.angle_conversions,
             ignore_binary_tag_for_string: options.ignore_binary_tag_for_string,
