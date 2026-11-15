@@ -414,6 +414,14 @@ pub struct Options {
     /// `~` and an absent value still read. Default: false.
     #[cfg_attr(feature = "serde_derived_types", serde(default))]
     pub unit_structs_refuse_mappings: bool,
+    /// Read a `!!null`-tagged scalar as null only when its text is a null spelling, as
+    /// `serde_yaml` does.
+    ///
+    /// By default `!!null` makes any scalar null (`!!null str` reads as unit). When `true`, a
+    /// unit target refuses a `!!null` scalar whose text is not empty, `~` or `null`
+    /// (`Null`, `NULL`). Default: false.
+    #[cfg_attr(feature = "serde_derived_types", serde(default))]
+    pub null_tag_requires_null_text: bool,
     /// If true, accept only YAML 1.2 Core boolean spellings:
     /// `true`, `True`, `TRUE`, `false`, `False`, and `FALSE`.
     /// Other spellings, including YAML 1.1 forms such as `yes`/`no`/`on`/`off`,
@@ -807,6 +815,7 @@ impl Default for Options {
             null_scalars_as_text: false,
             quoted_scalars_are_strings: false,
             unit_structs_refuse_mappings: false,
+            null_tag_requires_null_text: false,
             strict_booleans: false,
             angle_conversions: false,
             ignore_binary_tag_for_string: false,
@@ -876,6 +885,10 @@ impl std::fmt::Debug for Options {
             .field(
                 "unit_structs_refuse_mappings",
                 &self.unit_structs_refuse_mappings,
+            )
+            .field(
+                "null_tag_requires_null_text",
+                &self.null_tag_requires_null_text,
             )
             .field("strict_booleans", &self.strict_booleans)
             .field(
@@ -967,6 +980,7 @@ mod tests {
         assert!(!opts.null_scalars_as_text);
         assert!(!opts.quoted_scalars_are_strings);
         assert!(!opts.unit_structs_refuse_mappings);
+        assert!(!opts.null_tag_requires_null_text);
         assert!(!opts.strict_booleans);
         assert!(!opts.ignore_binary_tag_for_string);
         assert!(!opts.angle_conversions);

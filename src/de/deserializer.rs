@@ -1565,9 +1565,15 @@ impl<'de> de::Deserializer<'de> for YamlDeserializer<'de, '_> {
     /// **Accepted YAML forms:** end-of-input, container end, or a null-like
     /// scalar in plain style (`""`, `~`, `null`).
     fn deserialize_unit<V: Visitor<'de>>(mut self, visitor: V) -> Result<V::Value, Self::Error> {
-        if let Some((value, tag, style, _location)) = self.peek_effective_scalar()?
+        if let Some((value, tag, style, location)) = self.peek_effective_scalar()?
             && scalar_is_null(&tag, &value, &style)
         {
+            if self.cfg.null_tag_requires_null_text
+                && tag == SfTag::Null
+                && !scalar_is_nullish(&value, &style)
+            {
+                return Err(Error::UnexpectedValueForUnit { location });
+            }
             let _ = self.ev.next()?; // consume the scalar
             return visitor.visit_unit();
         }
