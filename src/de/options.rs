@@ -332,6 +332,11 @@ pub struct Options {
     /// a struct field named `key`.
     #[cfg_attr(feature = "serde_derived_types", serde(default))]
     pub bom_inside_document_as_content: bool,
+    /// Give an auto-detected block scalar at least one column of indentation, as libyaml
+    /// (and therefore `serde_yaml`) does: a column-0 line after a top-level `|` or `>` ends the
+    /// scalar. Forwarded to the parser. Default: false.
+    #[cfg_attr(feature = "serde_derived_types", serde(default))]
+    pub block_scalar_indent_at_least_one: bool,
 
     /// Policy for duplicate keys.
     pub duplicate_keys: DuplicateKeyPolicy,
@@ -638,6 +643,7 @@ impl Options {
         }
         parser_options.strict_indentation = self.strict_indentation;
         parser_options.bom_inside_document_as_content = self.bom_inside_document_as_content;
+        parser_options.block_scalar_indent_at_least_one = self.block_scalar_indent_at_least_one;
         parser_options
     }
 
@@ -827,6 +833,7 @@ impl Default for Options {
             emit_comments: true,
             strict_indentation: false,
             bom_inside_document_as_content: false,
+            block_scalar_indent_at_least_one: false,
             duplicate_keys: DuplicateKeyPolicy::Error,
             merge_keys: MergeKeyPolicy::Merge,
             alias_limits: AliasLimits::default(),
@@ -883,6 +890,10 @@ impl std::fmt::Debug for Options {
             .field(
                 "bom_inside_document_as_content",
                 &self.bom_inside_document_as_content,
+            )
+            .field(
+                "block_scalar_indent_at_least_one",
+                &self.block_scalar_indent_at_least_one,
             )
             .field("duplicate_keys", &self.duplicate_keys)
             .field("merge_keys", &self.merge_keys)
@@ -994,6 +1005,7 @@ mod tests {
         assert!(opts.emit_comments);
         assert!(!opts.strict_indentation);
         assert!(!opts.bom_inside_document_as_content);
+        assert!(!opts.block_scalar_indent_at_least_one);
         assert!(matches!(opts.duplicate_keys, DuplicateKeyPolicy::Error));
         assert!(matches!(opts.merge_keys, MergeKeyPolicy::Merge));
         assert_eq!(opts.alias_limits.max_total_replayed_events, 1_000_000);
