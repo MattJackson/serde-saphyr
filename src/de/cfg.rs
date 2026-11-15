@@ -21,6 +21,8 @@ pub(crate) struct Cfg {
     pub(crate) null_scalars_as_text: bool,
     /// Refuse untagged quoted scalars for boolean and numeric targets.
     pub(crate) quoted_scalars_are_strings: bool,
+    /// Refuse an empty mapping for a unit struct target.
+    pub(crate) unit_structs_refuse_mappings: bool,
     /// If true, accept only the six YAML 1.2 Core boolean spellings.
     pub(crate) strict_booleans: bool,
     /// If true, ROS-compliant angle resolver is enabled
@@ -54,6 +56,7 @@ impl Cfg {
             lowercase_radix_prefixes_only: options.lowercase_radix_prefixes_only,
             null_scalars_as_text: options.null_scalars_as_text,
             quoted_scalars_are_strings: options.quoted_scalars_are_strings,
+            unit_structs_refuse_mappings: options.unit_structs_refuse_mappings,
             strict_booleans: options.strict_booleans,
             angle_conversions: options.angle_conversions,
             ignore_binary_tag_for_string: options.ignore_binary_tag_for_string,

@@ -186,6 +186,7 @@ fn cfg_and_replay_events_follow_options_and_reference_overrides() {
         lowercase_radix_prefixes_only: true,
         null_scalars_as_text: true,
         quoted_scalars_are_strings: true,
+        unit_structs_refuse_mappings: true,
         strict_booleans: true,
         angle_conversions: true,
         ignore_binary_tag_for_string: true,
@@ -203,6 +204,7 @@ fn cfg_and_replay_events_follow_options_and_reference_overrides() {
     assert!(cfg.lowercase_radix_prefixes_only);
     assert!(cfg.null_scalars_as_text);
     assert!(cfg.quoted_scalars_are_strings);
+    assert!(cfg.unit_structs_refuse_mappings);
     assert!(cfg.strict_booleans);
     assert!(cfg.angle_conversions);
     assert!(cfg.ignore_binary_tag_for_string);
