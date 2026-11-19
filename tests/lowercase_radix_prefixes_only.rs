@@ -26,10 +26,12 @@ const UPPERCASE: [(&str, i64); 7] = [
 ];
 
 #[test]
-fn uppercase_prefixes_are_integers_by_default() {
+fn uppercase_prefixes_are_integers_for_typed_targets_by_default() {
+    // Since 2.2.0 (#266) implicit inference keeps uppercase prefixes as strings by default;
+    // typed integer targets still accept them unless `lowercase_radix_prefixes_only` is set.
     assert!(!Options::default().lowercase_radix_prefixes_only);
     for (yaml, value) in UPPERCASE {
-        assert_inferred(yaml, json!(value), Options::default());
+        assert_inferred(yaml, json!(yaml), Options::default());
         assert_eq!(
             from_str_with_options::<i64>(yaml, Options::default()).unwrap(),
             value
