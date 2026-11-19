@@ -632,6 +632,21 @@ impl UserMessageFormatter {
     }
 }
 
+/// The expected names exactly as serde's own `de::Error::unknown_field`/`unknown_variant` default
+/// renders them, so a deserializer migrating from serde_yaml keeps its refusal wording:
+/// "`a`", "`a` or `b`", or "one of `a`, `b`, `c`".
+fn one_of(names: &[&str]) -> String {
+    match names {
+        [] => String::new(),
+        [one] => format!("`{one}`"),
+        [a, b] => format!("`{a}` or `{b}`"),
+        _ => {
+            let quoted: Vec<String> = names.iter().map(|n| format!("`{n}`")).collect();
+            format!("one of {}", quoted.join(", "))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1248,20 +1263,5 @@ mod tests {
             DefaultMessageFormatter.format_message(&error),
             "validation error at name: too short at line 7, column 8"
         );
-    }
-}
-
-/// The expected names exactly as serde's own `de::Error::unknown_field`/`unknown_variant` default
-/// renders them, so a deserializer migrating from serde_yaml keeps its refusal wording:
-/// "`a`", "`a` or `b`", or "one of `a`, `b`, `c`".
-fn one_of(names: &[&str]) -> String {
-    match names {
-        [] => String::new(),
-        [one] => format!("`{one}`"),
-        [a, b] => format!("`{a}` or `{b}`"),
-        _ => {
-            let quoted: Vec<String> = names.iter().map(|n| format!("`{n}`")).collect();
-            format!("one of {}", quoted.join(", "))
-        }
     }
 }
