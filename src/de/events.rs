@@ -430,6 +430,20 @@ pub(crate) trait Events<'de> {
     /// - Lookahead logic (merge, container boundaries, option/unit handling).
     fn peek(&mut self) -> Result<Option<&Ev<'de>>, Error>;
 
+    /// Peek at the node a typed enum with `variants` is about to read.
+    ///
+    /// A node under a local tag spelled like a core type (`!map`, `!seq`, `!str`, ...; never the
+    /// core `!!map`) whose name is one of `variants` selects that variant, so the tag's node-kind
+    /// check (a `!map` tag on a mapping) is not applied to it. Every other node, and every node
+    /// read by anything other than a typed enum, is checked exactly as by [`Self::peek`].
+    /// Replayed events were checked when they were first produced.
+    fn peek_enum_node(
+        &mut self,
+        _variants: &'static [&'static str],
+    ) -> Result<Option<&Ev<'de>>, Error> {
+        self.peek()
+    }
+
     /// Consume the synthetic null representing a stream with no documents.
     /// Returns false for actual YAML nodes and replayed events.
     fn take_empty_stream(&mut self) -> Result<bool, Error> {

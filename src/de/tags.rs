@@ -149,6 +149,35 @@ fn tag_name_to_sf_tag(name: &str) -> SfTag {
     }
 }
 
+/// The YAML core type names a local tag may also spell, with the meaning 2.2 gives that spelling.
+const CORE_LIKE_LOCAL_NAMES: [(&str, SfTag); 9] = [
+    ("int", SfTag::Int),
+    ("float", SfTag::Float),
+    ("bool", SfTag::Bool),
+    ("null", SfTag::Null),
+    ("seq", SfTag::Seq),
+    ("map", SfTag::Map),
+    ("str", SfTag::String),
+    ("timestamp", SfTag::TimeStamp),
+    ("binary", SfTag::Binary),
+];
+
+/// The name of a node's tag when it is a LOCAL tag spelled like a YAML core type (`!map`,
+/// `!seq`, `!str`, ...), judged by the parser-resolved spelling `raw_tag`.
+///
+/// Only a tag that resolves into the local `!` namespace qualifies. `!!map`, the verbatim
+/// `!<tag:yaml.org,2002:map>` and a `%TAG` handle that expands to the core namespace all resolve
+/// to the core URI and are never returned here, so a core tag can never pass for a local one.
+/// A typed enum with a variant of exactly this name reads the tag as that variant's selector;
+/// every other reader treats the tag as `tag` and checks its node kind as before.
+pub(crate) fn core_like_local_name(tag: SfTag, raw_tag: Option<&str>) -> Option<&str> {
+    let name = raw_tag?.strip_prefix('!')?;
+    CORE_LIKE_LOCAL_NAMES
+        .iter()
+        .any(|&(word, kind)| word == name && kind == tag)
+        .then_some(name)
+}
+
 fn core_suffix_to_sf_tag(suffix: &str) -> Option<SfTag> {
     match suffix {
         "null" => Some(SfTag::Null),

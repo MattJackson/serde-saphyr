@@ -378,6 +378,19 @@ pub(crate) fn with_root_redaction_unless_null<'de, 'e, T>(
     with_root_redaction(de, f).map(Some)
 }
 
+/// The variant a local tag spelled like a core type (`!map`, `!seq`, `!str`, ...; never the core
+/// `!!map`) selects on a typed enum: only when the enum has a variant of exactly that name.
+/// `None` leaves the node to be read, and its tag checked, as on any other target.
+fn core_like_enum_variant(
+    tag: SfTag,
+    raw_tag: Option<&str>,
+    variants: &'static [&'static str],
+) -> Option<String> {
+    super::tags::core_like_local_name(tag, raw_tag)
+        .filter(|name| variants.contains(name))
+        .map(ToOwned::to_owned)
+}
+
 struct EnumScalarId<'de> {
     raw: Cow<'de, str>,
     effective: Cow<'de, str>,
@@ -2762,7 +2775,9 @@ impl<'de> de::Deserializer<'de> for YamlDeserializer<'de, '_> {
 
         let mut tagged_enum = None;
 
-        let peeked_ev = self.ev.peek()?.cloned();
+        // A local tag spelled like a core type that names one of `variants` selects that variant:
+        // the event layer skips its node-kind check for this one node (see `peek_enum_node`).
+        let peeked_ev = self.ev.peek_enum_node(variants)?.cloned();
         let mode = match peeked_ev {
             Some(Ev::RecursiveAlias { location, .. }) => {
                 return Err(Error::RecursiveReferencesRequireWeakTypes { location });
@@ -2775,7 +2790,9 @@ impl<'de> de::Deserializer<'de> for YamlDeserializer<'de, '_> {
                 location,
                 ..
             }) => {
-                if let Some(tag_name) = simple_tagged_enum_name(&raw_tag, &tag) {
+                if let Some(tag_name) = simple_tagged_enum_name(&raw_tag, &tag)
+                    .or_else(|| core_like_enum_variant(tag, raw_tag.as_deref(), variants))
+                {
                     tagged_enum = Some((tag_name, location));
                 }
                 // A matching application tag selects the variant. Resolve and validate the
@@ -2826,14 +2843,12 @@ impl<'de> de::Deserializer<'de> for YamlDeserializer<'de, '_> {
                 ..
             }) => {
                 // `!map` is classified as `SfTag::Map` for compatibility when used as
-                // an ordinary mapping tag. In a typed enum context it may instead select
-                // a renamed `map` variant. Resolved core forms (`!!map`, verbatim tags,
-                // and directive-expanded handles) have a different `raw_tag` and remain
-                // YAML type annotations.
-                let tag_name = simple_tagged_enum_name(&raw_tag, &tag).or_else(|| {
-                    (tag == SfTag::Map && raw_tag.as_deref() == Some("!map"))
-                        .then(|| "map".to_owned())
-                });
+                // an ordinary mapping tag. In a typed enum context it (and the other local
+                // core-like names) may instead select a variant of that name. Resolved core
+                // forms (`!!map`, verbatim tags, and directive-expanded handles) have a
+                // different `raw_tag` and remain YAML type annotations.
+                let tag_name = simple_tagged_enum_name(&raw_tag, &tag)
+                    .or_else(|| core_like_enum_variant(tag, raw_tag.as_deref(), variants));
                 if let Some(tag_name) = tag_name
                     && variants.contains(&tag_name.as_str())
                 {
@@ -2889,6 +2904,7 @@ impl<'de> de::Deserializer<'de> for YamlDeserializer<'de, '_> {
                 ..
             }) => {
                 if let Some(tag_name) = simple_tagged_enum_name(&raw_tag, &tag)
+                    .or_else(|| core_like_enum_variant(tag, raw_tag.as_deref(), variants))
                     && variants.contains(&tag_name.as_str())
                 {
                     // Consume the SeqStart, collect all events until SeqEnd, replay as untagged sequence

@@ -304,6 +304,11 @@ pub(crate) struct LiveEvents<'a> {
     /// Whether explicitly tagged nodes whose tags are unknown to this crate are rejected.
     reject_unsupported_tags: bool,
 
+    /// The variants of the typed enum reading the node being produced now (empty otherwise):
+    /// a local tag spelled like a core type that names one of them selects that variant, so
+    /// its node-kind check is skipped for this one node (see [`Events::peek_enum_node`]).
+    enum_variants: &'static [&'static str],
+
     /// Retain scalar tag spellings for struct field-name diagnostics.
     preserve_original_tags: bool,
 
@@ -448,6 +453,7 @@ impl<'a> LiveEvents<'a> {
 
             pending_error,
             reject_unsupported_tags,
+            enum_variants: &[],
             preserve_original_tags,
             empty_nodes_as_empty_text,
             angle_conversions,
@@ -547,6 +553,7 @@ impl<'a> LiveEvents<'a> {
 
             pending_error,
             reject_unsupported_tags,
+            enum_variants: &[],
             preserve_original_tags,
             empty_nodes_as_empty_text,
             angle_conversions,
@@ -573,18 +580,29 @@ impl<'a> LiveEvents<'a> {
         }
     }
 
+    /// Whether this node's tag selects a variant of the typed enum reading it: a local tag
+    /// spelled like a core type (`!map`, never `!!map`) naming one of [`Self::enum_variants`].
+    fn selects_enum_variant(&self, tag_kind: SfTag, raw_tag: Option<&str>) -> bool {
+        crate::tags::core_like_local_name(tag_kind, raw_tag)
+            .is_some_and(|name| self.enum_variants.contains(&name))
+    }
+
+    /// `node_kind` is `None` only when the tag selects an enum variant
+    /// ([`Self::selects_enum_variant`]): such a tag does not type the node, so its node-kind
+    /// check does not apply.
     fn ensure_supported_tag(
         &self,
         tag_kind: SfTag,
         tag: impl FnOnce() -> String,
-        node_kind: TagNodeKind,
+        node_kind: Option<TagNodeKind>,
         scalar_value: Option<&str>,
         position: NodePosition,
         location: Location,
     ) -> Result<(), Error> {
-        if tag_kind
-            .requires()
-            .is_some_and(|required| required != node_kind)
+        if let Some(node_kind) = node_kind
+            && tag_kind
+                .requires()
+                .is_some_and(|required| required != node_kind)
         {
             return if tag_kind == SfTag::Include {
                 Err(Error::UnsupportedIncludeForm { location })
@@ -667,18 +685,14 @@ impl<'a> LiveEvents<'a> {
         &mut self,
         tag_kind: SfTag,
         tag: impl FnOnce() -> String,
+        raw_tag: Option<&str>,
         value: &str,
         location: Location,
     ) -> Result<(), Error> {
         let position = self.next_node_position();
-        self.ensure_supported_tag(
-            tag_kind,
-            tag,
-            TagNodeKind::Scalar,
-            Some(value),
-            position,
-            location,
-        )?;
+        let node_kind =
+            (!self.selects_enum_variant(tag_kind, raw_tag)).then_some(TagNodeKind::Scalar);
+        self.ensure_supported_tag(tag_kind, tag, node_kind, Some(value), position, location)?;
         if self.reject_unsupported_tags {
             self.finish_tagged_node(position);
         }
@@ -689,15 +703,16 @@ impl<'a> LiveEvents<'a> {
         &mut self,
         tag_kind: SfTag,
         tag: impl FnOnce() -> String,
+        raw_tag: Option<&str>,
         is_mapping: bool,
         location: Location,
     ) -> Result<(), Error> {
         let parent_position = self.next_node_position();
-        let node_kind = if is_mapping {
+        let node_kind = (!self.selects_enum_variant(tag_kind, raw_tag)).then_some(if is_mapping {
             TagNodeKind::Mapping
         } else {
             TagNodeKind::Sequence
-        };
+        });
         self.ensure_supported_tag(tag_kind, tag, node_kind, None, parent_position, location)?;
         if !self.reject_unsupported_tags {
             return Ok(());
@@ -750,7 +765,7 @@ impl<'a> LiveEvents<'a> {
         let reference_location = self.inject.last().map(|frame| frame.reference_location);
         let result = match ev {
             Ev::RecursiveAlias { location, .. } => {
-                self.validate_scalar_tag(SfTag::Null, String::new, "", *location)
+                self.validate_scalar_tag(SfTag::Null, String::new, None, "", *location)
             }
             Ev::Scalar {
                 value,
@@ -761,6 +776,7 @@ impl<'a> LiveEvents<'a> {
             } => self.validate_scalar_tag(
                 *tag,
                 || replayed_tag_spelling(*tag, raw_tag.as_deref()),
+                raw_tag.as_deref(),
                 value,
                 *location,
             ),
@@ -772,6 +788,7 @@ impl<'a> LiveEvents<'a> {
             } => self.validate_container_tag(
                 *tag,
                 || replayed_tag_spelling(*tag, raw_tag.as_deref()),
+                raw_tag.as_deref(),
                 false,
                 *location,
             ),
@@ -783,6 +800,7 @@ impl<'a> LiveEvents<'a> {
             } => self.validate_container_tag(
                 *tag,
                 || replayed_tag_spelling(*tag, raw_tag.as_deref()),
+                raw_tag.as_deref(),
                 true,
                 *location,
             ),
@@ -1058,14 +1076,15 @@ impl<'a> LiveEvents<'a> {
                         self.pending_include_anchor = 0;
                     }
 
+                    let raw_tag = tag.as_ref().map(|tag| Cow::Owned(tag.to_string()));
                     self.validate_scalar_tag(
                         tag_s,
                         || tag.as_deref().map_or_else(String::new, Tag::original),
+                        raw_tag.as_deref(),
                         &val,
                         location,
                     )?;
 
-                    let raw_tag = tag.as_ref().map(|tag| Cow::Owned(tag.to_string()));
                     let original_tag = if self.preserve_original_tags {
                         tag.as_deref()
                             .map(Tag::original)
@@ -1100,9 +1119,12 @@ impl<'a> LiveEvents<'a> {
                     #[cfg(feature = "include")]
                     let mut anchor_id = anchor_id;
                     let tag_s = SfTag::from_optional_cow(&tag);
+                    let raw_tag: Option<Cow<'_, str>> =
+                        tag.as_ref().map(|t| Cow::Owned(t.to_string()));
                     self.validate_container_tag(
                         tag_s,
                         || tag.as_deref().map_or_else(String::new, Tag::original),
+                        raw_tag.as_deref(),
                         false,
                         location,
                     )?;
@@ -1126,7 +1148,7 @@ impl<'a> LiveEvents<'a> {
                     let ev = Ev::SeqStart {
                         anchor: anchor_id,
                         tag: tag_s,
-                        raw_tag: tag.as_ref().map(|t| Cow::Owned(t.to_string())),
+                        raw_tag,
                         location,
                     };
                     // Existing frames go deeper with this start.
@@ -1173,9 +1195,12 @@ impl<'a> LiveEvents<'a> {
 
                 Event::MappingStart(_style, anchor_id, tag) => {
                     let tag_s = SfTag::from_optional_cow(&tag);
+                    let raw_tag: Option<Cow<'_, str>> =
+                        tag.as_ref().map(|t| Cow::Owned(t.to_string()));
                     self.validate_container_tag(
                         tag_s,
                         || tag.as_deref().map_or_else(String::new, Tag::original),
+                        raw_tag.as_deref(),
                         true,
                         location,
                     )?;
@@ -1201,7 +1226,7 @@ impl<'a> LiveEvents<'a> {
                     let ev = Ev::MapStart {
                         anchor: anchor_id,
                         tag: tag_s,
-                        raw_tag: tag.as_ref().map(|t| Cow::Owned(t.to_string())),
+                        raw_tag,
                         location,
                     };
                     self.bump_depth_on_start();
@@ -1666,6 +1691,19 @@ impl<'de> Events<'de> for LiveEvents<'de> {
         }
 
         Ok((&self.look).into())
+    }
+
+    /// See [`Events::peek_enum_node`]. Only the one node produced by this peek is judged against
+    /// `variants`; a node already in the lookahead was checked when it was produced.
+    fn peek_enum_node(
+        &mut self,
+        variants: &'static [&'static str],
+    ) -> Result<Option<&Ev<'de>>, Error> {
+        let outer = std::mem::replace(&mut self.enum_variants, variants);
+        let produced = self.peek().map(|_| ());
+        self.enum_variants = outer;
+        produced?;
+        self.peek()
     }
 
     fn take_empty_stream(&mut self) -> Result<bool, Error> {

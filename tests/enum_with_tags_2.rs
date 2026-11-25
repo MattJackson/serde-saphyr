@@ -511,3 +511,38 @@ fn serde_saphyr<T: DeserializeOwned + Debug>(yaml: &str) -> T {
         Err(err) => panic!("{}", err),
     }
 }
+
+#[derive(Debug, PartialEq, Eq, Deserialize)]
+enum LocalCoreLikeVariant {
+    #[serde(rename = "map")]
+    Record(u32),
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize)]
+enum NoLocalCoreLikeVariant {
+    Record(u32),
+}
+
+/// A local tag spelled like a core type selects a variant only on an enum that has a variant of
+/// exactly that name; the core `!!map` never does, and every other target checks the tag's node
+/// kind as before.
+#[test]
+fn local_core_like_tag_selects_only_a_variant_of_that_name() {
+    assert_eq!(
+        serde_saphyr::<LocalCoreLikeVariant>("!map 7"),
+        LocalCoreLikeVariant::Record(7)
+    );
+    for refused in [
+        serde_saphyr::from_str::<LocalCoreLikeVariant>("!!map 7").map(|_| ()),
+        serde_saphyr::from_str::<NoLocalCoreLikeVariant>("!map 7").map(|_| ()),
+        serde_saphyr::from_str::<u32>("!map 7").map(|_| ()),
+        serde_saphyr::from_str::<BTreeMap<String, u32>>("n: !map 7").map(|_| ()),
+    ] {
+        let err = refused.unwrap_err();
+        let err = err.without_snippet();
+        assert!(
+            matches!(err, serde_saphyr::Error::UnsupportedTag { .. }),
+            "{err:?}"
+        );
+    }
+}
